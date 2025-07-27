@@ -8,7 +8,7 @@ const PORT = 5000;
 
 app.use(cors()); // Allow cross-origin requests from frontend
 
-const uri = process.env.MONGODB_URI;
+const uri = {process.env.MONGODB_URI};
 
 // Create a single MongoClient instance to reuse for better performance
 const client = new MongoClient(uri);
