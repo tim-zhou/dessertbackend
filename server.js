@@ -4,34 +4,43 @@ const cors = require("cors");
 require("dotenv").config();
 
 const app = express();
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
 
-app.use(cors()); // Allow cross-origin requests from frontend
+app.use(cors());
 
 const uri = process.env.MONGODB_URI;
 
-// Create a single MongoClient instance to reuse for better performance
+if (!uri) {
+  console.error("Error: MONGODB_URI environment variable not set.");
+  process.exit(1);
+}
+
 const client = new MongoClient(uri);
 
-app.get("/api/menu", async (req, res) => {
+async function startServer() {
   try {
-    // Connect only once and reuse connection
-    if (!client.topology || !client.topology.isConnected()) {
-      await client.connect();
-    }
+    await client.connect();
+    console.log("Connected to MongoDB");
 
-    const db = client.db("DessertShop");           // ✅ Database name
-    const collection = db.collection("MenuItems"); // ✅ Collection name
-    const items = await collection.find({}).toArray();
+    app.get("/api/menu", async (req, res) => {
+      try {
+        const db = client.db("DessertShop");
+        const collection = db.collection("MenuItems");
+        const items = await collection.find({}).toArray();
+        res.json(items);
+      } catch (err) {
+        console.error("Database error:", err);
+        res.status(500).json({ error: "Internal server error" });
+      }
+    });
 
-    res.json(items);
+    app.listen(PORT, () => {
+      console.log(`Backend running on port ${PORT}`);
+    });
   } catch (err) {
-    console.error("Database error:", err);
-    res.status(500).json({ error: "Internal server error" });
+    console.error("Failed to connect to MongoDB", err);
+    process.exit(1);
   }
-});
+}
 
-// Start the server
-app.listen(PORT, () => {
-  console.log(`Backend running on http://localhost:${PORT}`);
-});
+startServer();
